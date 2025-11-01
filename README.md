@@ -15,6 +15,7 @@ At least one of the servers you add must be an SSE server.
 
 ## High Level Plan
 - [ ] Gather relevant code and references into a folder and review them.
+- [ ] Fix the issue with embedding model, MCP inspection setup
 
 ## References
 - [Model Context Protocol Overview](https://modelcontextprotocol.io/introduction) — article explaining MCP essentials for orchestrating tool-augmented agents. (Tentative rank 1)
