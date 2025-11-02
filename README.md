@@ -15,6 +15,13 @@ At least one of the servers you add must be an SSE server.
 ## High Level Plan
 - [x] Gather relevant code and references into a folder and review them.
 - [x] Fix the issue with embedding model, MCP inspection setup
+- [ ] Replicate the agent from scratch leveraging S8 but starting simple to required, (pydantic, uv, logging)
+- [ ] Test agent working to get latest articles
+- [ ] Understand pdb how it works with async code to debug issues
+- [ ] Understand previously built gmail mcp function - add and integrate
+- [ ] Write similar kind for google sheet and write mcp 
+- [ ] Research about telegram sse and integrate with you code
+- [ ] Decide whether to host a solution as back end to keep listening and triggered as receive telegram post
 
 ## References
 - [Model Context Protocol Overview](https://modelcontextprotocol.io/introduction) — article explaining MCP essentials for orchestrating tool-augmented agents. (Tentative rank 1)
