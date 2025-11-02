@@ -27,13 +27,13 @@ persona:
 mcp_servers:
   - id: math
     script: mcp_server_1.py
-    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/S8 Share
+    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/S8
   - id: documents
     script: mcp_server_2.py
-    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/S8 Share
+    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/S8
   - id: websearch
     script: mcp_server_3.py
-    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/S8 Share
+    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/S8
 
 
 
