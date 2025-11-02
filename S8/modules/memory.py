@@ -48,18 +48,22 @@ class MemoryManager:
         self.embeddings: List[np.ndarray] = []
 
     def _get_embedding(self, text: str) -> np.ndarray:
+        print("Debbuging - Getting embedding for text...")
         response = requests.post(
             self.embedding_model_url,
             json={"model": self.model_name, "prompt": text}
         )
+        print("Debbuggin - Embedding response received.")
         response.raise_for_status()
         return np.array(response.json()["embedding"], dtype=np.float32)
 
     def add(self, item: MemoryItem):
+        print("Debbuggin - Adding memory item...")
         embedding = self._get_embedding(item.text)
         self.embeddings.append(embedding)
         self.data.append(item)
 
+        print("Debbuggin - Memory item embedding obtained.")
         # Init or add to index
         if self.index is None:
             self.index = faiss.IndexFlatL2(len(embedding))
