@@ -247,5 +247,18 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "dev":
             mcp.run()  # Run without transport for dev server
     else:
-        mcp.run(transport="stdio")  # Run with stdio for direct execution
-        print("\nShutting down...")
+        import threading
+        server_thread = threading.Thread(target=lambda: mcp.run(transport="stdio"))
+        server_thread.daemon = True
+        server_thread.start()
+        
+        # Wait a moment for the server to start
+        time.sleep(2)
+
+        
+        # Keep the main thread alive
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nShutting down...")
