@@ -1,0 +1,17 @@
+memory:
+  top_k: 3
+  type_filter: tool_output   # Options: tool_output, fact, query, all
+  embedding_model: nomic-embed-text
+  embedding_url: http://localhost:11434/api/embeddings
+
+llm:
+  text_generation: gemini
+  embedding: nomic
+
+mcp_servers:
+  - id: documents
+    script: mcp_server_2.py
+    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/mcp_server
+  - id: websearch
+    script: mcp_server_3.py
+    cwd: /Users/payalchakraborty/Dev/EAG2/telegram-dailybites-bot/mcp_server

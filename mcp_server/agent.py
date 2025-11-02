@@ -2,7 +2,7 @@
 
 import asyncio
 import yaml
-from core.loop import AgentLoop
+# from core.loop import AgentLoop
 from core.session import MultiMCP
 
 def log(stage: str, msg: str):
@@ -25,18 +25,18 @@ async def main():
     print("Agent before initialize")
     await multi_mcp.initialize()
 
-    agent = AgentLoop(
-        user_input=user_input,
-        dispatcher=multi_mcp  # now uses dynamic MultiMCP
-    )
+    # agent = AgentLoop(
+    #     user_input=user_input,
+    #     dispatcher=multi_mcp  # now uses dynamic MultiMCP
+    # )
 
-    try:
-        final_response = await agent.run()
-        print("\n💡 Final Answer:\n", final_response.replace("FINAL_ANSWER:", "").strip())
+    # try:
+    #     final_response = await agent.run()
+    #     print("\n💡 Final Answer:\n", final_response.replace("FINAL_ANSWER:", "").strip())
 
-    except Exception as e:
-        log("fatal", f"Agent failed: {e}")
-        raise
+    # except Exception as e:
+    #     log("fatal", f"Agent failed: {e}")
+    #     raise
 
 
 if __name__ == "__main__":
