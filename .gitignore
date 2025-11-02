@@ -1,2 +1,4 @@
 mcp_server/core/__pycache__/*
 mcp_server/modules/__pycache__/*
+mcp_server/.env
+mcp_server/__pycache__/*
