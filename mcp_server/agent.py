@@ -2,19 +2,40 @@
 
 import asyncio
 import yaml
+from rich.console import Console
+from rich.panel import Panel
+from rich.markdown import Markdown
 from core.loop import AgentLoop
 from core.session import MultiMCP
+
+console = Console()
+
+
+def format_final_answer(raw: str) -> str:
+    """Normalize FINAL_ANSWER payload for pretty console output."""
+    answer = raw.replace("FINAL_ANSWER:", "").strip()
+    if answer.startswith("[") and answer.endswith("]"):
+        answer = answer[1:-1].strip()
+    answer = answer.replace("\\n", "\n").strip()
+
+    lines = answer.splitlines()
+    if len(lines) > 1 and lines[0].strip() and lines[1].strip().startswith("1."):
+        lines.insert(1, "")  # add spacing between lead-in sentence and list
+        answer = "\n".join(lines)
+
+    return answer or "No answer returned."
 
 def log(stage: str, msg: str):
     """Simple timestamped console logger."""
     import datetime
     now = datetime.datetime.now().strftime("%H:%M:%S")
-    print(f"[{now}] [{stage}] {msg}")
+    console.print(f"[{now}] [{stage}] {msg}")
 
 
 async def main():
-    print("🧠 Cortex-R Agent Ready")
-    user_input = input("🧑 What do you want to solve today? → ")
+    console.print("🧠 Telegram Agent Ready", style="bold green")
+    user_input = "find top 3 latest Hacker News article - https://news.ycombinator.com/ with links and summaries"
+    # user_input = input("🧑 What do you want to solve today? → ")
 
     # Load MCP server configs from profiles.yaml
     with open("config/profiles.yaml", "r") as f:
@@ -22,7 +43,7 @@ async def main():
         mcp_servers = profile.get("mcp_servers", [])
 
     multi_mcp = MultiMCP(server_configs=mcp_servers)
-    print("Agent before initialize")
+    console.print("Agent before initialize", style="dim")
     await multi_mcp.initialize()
 
     agent = AgentLoop(
@@ -32,7 +53,16 @@ async def main():
 
     try:
         final_response = await agent.run()
-        print("\n💡 Final Answer:\n", final_response.replace("FINAL_ANSWER:", "").strip())
+        answer = format_final_answer(final_response)
+        console.print()
+        console.print(
+            Panel(
+                Markdown(answer),
+                title="💡 Final Answer",
+                border_style="cyan",
+                expand=False,
+            )
+        )
 
     except Exception as e:
         log("fatal", f"Agent failed: {e}")
@@ -41,12 +71,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-# Find the ASCII values of characters in INDIA and then return sum of exponentials of those values.
-# How much Anmol singh paid for his DLF apartment via Capbridge? 
-# What do you know about Don Tapscott and Anthony Williams?
-# What is the relationship between Gensol and Go-Auto?
-# which course are we teaching on Canvas LMS?
-# Summarize this page: https://theschoolof.ai/
-# What is the log value of the amount that Anmol singh paid for his DLF apartment via Capbridge? 
