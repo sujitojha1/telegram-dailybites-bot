@@ -13,22 +13,20 @@ At least one of the servers you add must be an SSE server.
 
 
 ## High Level Plan
-- [x] Gather relevant code and references into a folder and review them.
-- [x] Fix the issue with embedding model, MCP inspection setup
-- [ ] Replicate the agent from scratch leveraging S8 but starting simple to required, (pydantic, uv, logging)
-- [ ] Test agent working to get latest articles
-- [ ] Understand pdb how it works with async code to debug issues
-- [ ] Understand previously built gmail mcp function - add and integrate
-- [ ] Write similar kind for google sheet and write mcp 
-- [ ] Research about telegram sse and integrate with you code
-- [ ] Decide whether to host a solution as back end to keep listening and triggered as receive telegram post
+- [x] Consolidate existing research, code snippets, and MCP references in the repo; resolve initial embedding/MCP inspection blockers.
+- [ ] Stand up an `mcp_servers/` package, migrate the current prototype scripts, and define shared base classes/utilities.
+- [ ] Rebuild the core agent loop with clean config loading (Pydantic), `uv` task scheduling, and structured logging.
+- [ ] Implement the news discovery workflow (Hacker News, Hugging Face papers, AI company blogs) with reproducible tests.
+- [ ] Integrate Gmail MCP actions end-to-end, including credential storage, token refresh, and email composition.
+- [ ] Add a Google Sheets MCP action to persist curated results and expose sheet metadata back to the agent.
+- [ ] Design and wire a Telegram bridge that emits updates over SSE, covering webhook/long-poll strategies and failure handling.
+- [ ] Establish an async debugging toolkit (pdb, `asyncio` inspectors) and document hot paths for faster triage.
+- [ ] Validate the complete flow locally, then choose a hosting strategy for a long-running Telegram listener (e.g., uvicorn worker, serverless).
 
 ## References
-- [Model Context Protocol Overview](https://modelcontextprotocol.io/introduction) — article explaining MCP essentials for orchestrating tool-augmented agents. (Tentative rank 1)
-- [modelcontextprotocol/python-mcp](https://github.com/modelcontextprotocol/python-mcp) — GitHub repository with reference MCP server implementations ready to extend for Gmail and Sheets. (Tentative rank 2)
-- [Google Developers: Gmail API Python Quickstart](https://developers.google.com/gmail/api/quickstart/python) — article covering the auth and message operations you will wrap as MCP tools. (Tentative rank 3)
-- [Google Developers: Sheets API Python Quickstart](https://developers.google.com/sheets/api/quickstart/python) — article showing how to persist agent output in Sheets through an MCP connector. (Tentative rank 4)
-- [googleworkspace/python-samples](https://github.com/googleworkspace/python-samples) — GitHub repository with end-to-end Gmail and Sheets samples to adapt into MCP actions. (Tentative rank 5)
-- [Telegram Bot API Documentation](https://core.telegram.org/bots/api) — article detailing webhook and long-poll patterns to pair with an SSE bridge for Telegram updates. (Tentative rank 6)
-- [MDN Web Docs: Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) — article explaining SSE fundamentals for streaming Telegram bot events. (Tentative rank 7)
-- [EventSource/eventsource](https://github.com/EventSource/eventsource) — GitHub repository demonstrating SSE client/server interoperability for bot delivery pipelines. (Tentative rank 8)
+- [python-mcp Gmail server example](https://github.com/modelcontextprotocol/python-mcp/tree/main/examples/gmail) — ready-to-run FastMCP server exposing list/send Gmail actions (token caching via OAuth2).
+- [python-mcp Google Sheets server example](https://github.com/modelcontextprotocol/python-mcp/tree/main/examples/google_sheets) — demonstrates a Sheets MCP server with create/update worksheet tools and shared `google_auth.py` helpers.
+- [Gmail API quickstart script](https://github.com/googleworkspace/python-samples/blob/main/gmail/quickstart/quickstart.py) — minimal OAuth flow and message listing code used while wiring the MCP Gmail actions.
+- [Sheets API snippets](https://github.com/googleworkspace/python-samples/blob/main/sheets/snippets/sheets_snippets.py) — canonical CRUD operations for Sheets that map directly into the planned MCP tool surface.
+- [Starlette server-sent events example](https://github.com/encode/starlette/blob/master/examples/events.py) — production-grade SSE endpoint pattern adaptable for forwarding Telegram updates.
+- [python-telegram-bot webhook app](https://github.com/python-telegram-bot/python-telegram-bot/blob/master/examples/webhookapp.py) — webhook-to-background worker pipeline forming the upstream feed for the SSE bridge.
