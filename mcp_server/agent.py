@@ -36,6 +36,7 @@ async def main():
     console.print("🧠 Telegram Agent Ready", style="bold green")
     user_input = "find top 3 latest Hacker News article - https://news.ycombinator.com/ with links and summaries"
     # user_input = input("🧑 What do you want to solve today? → ")
+    console.print(f"🧑 What do you want to solve today? → {user_input}")
 
     # Load MCP server configs from profiles.yaml
     with open("config/profiles.yaml", "r") as f:
@@ -43,7 +44,7 @@ async def main():
         mcp_servers = profile.get("mcp_servers", [])
 
     multi_mcp = MultiMCP(server_configs=mcp_servers)
-    console.print("Agent before initialize", style="dim")
+    console.print("\nAgent before initialize", style="dim")
     await multi_mcp.initialize()
 
     agent = AgentLoop(

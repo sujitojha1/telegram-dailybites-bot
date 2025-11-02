@@ -3,6 +3,7 @@
 import os
 import sys
 from typing import Optional, Any, List, Dict
+from rich.console import Console
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -47,6 +48,9 @@ class MCP:
                 return await session.call_tool(tool_name, arguments=arguments)
 
 
+console = Console()
+
+
 class MultiMCP:
     """
     Stateless version: discovers tools from multiple MCP servers, but reconnects per tool call.
@@ -58,7 +62,6 @@ class MultiMCP:
         self.tool_map: Dict[str, Dict[str, Any]] = {}  # tool_name → {config, tool}
 
     async def initialize(self):
-        print("in MultiMCP initialize")
         for config in self.server_configs:
             try:
                 params = StdioServerParameters(
@@ -66,25 +69,32 @@ class MultiMCP:
                     args=[config["script"]],
                     cwd=config.get("cwd", os.getcwd())
                 )
-                print(f"→ Scanning tools from: {config['script']} in {params.cwd}")
+                console.print(
+                    f"→ Scanning tools from: [bold]{config['script']}[/] in {params.cwd}",
+                    style="cyan",
+                )
                 async with stdio_client(params) as (read, write):
-                    print("Connection established, creating session...")
+                    console.print("Connection established, creating session...", style="dim")
                     try:
                         async with ClientSession(read, write) as session:
-                            print("[agent] Session created, initializing...")
+                            console.print("[agent] Session created, initializing...", style="dim")
                             await session.initialize()
-                            print("[agent] MCP session initialized")
+                            console.print("[agent] MCP session initialized", style="green")
                             tools = await session.list_tools()
-                            print(f"→ Tools received: {[tool.name for tool in tools.tools]}")
+                            tool_names = ", ".join(tool.name for tool in tools.tools)
+                            console.print(f"→ Tools received: {tool_names}", style="cyan")
                             for tool in tools.tools:
                                 self.tool_map[tool.name] = {
                                     "config": config,
                                     "tool": tool
                                 }
                     except Exception as se:
-                        print(f"❌ Session error: {se}")
+                        console.print(f"❌ Session error: {se}", style="bold red")
             except Exception as e:
-                print(f"❌ Error initializing MCP server {config['script']}: {e}")
+                console.print(
+                    f"❌ Error initializing MCP server {config['script']}: {e}",
+                    style="bold red",
+                )
 
     async def call_tool(self, tool_name: str, arguments: dict) -> Any:
         entry = self.tool_map.get(tool_name)
