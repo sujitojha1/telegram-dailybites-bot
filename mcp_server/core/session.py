@@ -69,20 +69,20 @@ class MultiMCP:
                     args=[config["script"]],
                     cwd=config.get("cwd", os.getcwd())
                 )
-                console.print(
-                    f"→ Scanning tools from: [bold]{config['script']}[/] in {params.cwd}",
-                    style="cyan",
-                )
+                # console.print(
+                #     f"→ Scanning tools from: [bold]{config['script']}[/] in {params.cwd}",
+                #     style="cyan",
+                # )
                 async with stdio_client(params) as (read, write):
-                    console.print("Connection established, creating session...", style="dim")
+                    # console.print("Connection established, creating session...", style="dim")
                     try:
                         async with ClientSession(read, write) as session:
-                            console.print("[agent] Session created, initializing...", style="dim")
+                            # console.print("[agent] Session created, initializing...", style="dim")
                             await session.initialize()
-                            console.print("[agent] MCP session initialized", style="green")
+                            # console.print("[agent] MCP session initialized", style="green")
                             tools = await session.list_tools()
                             tool_names = ", ".join(tool.name for tool in tools.tools)
-                            console.print(f"→ Tools received: {tool_names}", style="cyan")
+                            # console.print(f"→ Tools received: {tool_names}", style="cyan")
                             for tool in tools.tools:
                                 self.tool_map[tool.name] = {
                                     "config": config,

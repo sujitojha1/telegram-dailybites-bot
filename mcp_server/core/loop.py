@@ -1,13 +1,14 @@
 # core/loop.py
 
 import asyncio
+import json
+from rich.console import Console
 from core.context import AgentContext
 from core.session import MultiMCP
 from core.strategy import decide_next_action
 from modules.perception import extract_perception, PerceptionResult
 from modules.action import ToolCallResult, parse_function_call
 from modules.memory import MemoryItem
-import json
 
 
 class AgentLoop:
@@ -15,6 +16,7 @@ class AgentLoop:
         self.context = AgentContext(user_input)
         self.mcp = dispatcher
         self.tools = dispatcher.get_all_tools()
+        self.console = Console()
 
     def tool_expects_input(self, tool_name: str) -> bool:
         tool = next((t for t in self.tools if getattr(t, "name", None) == tool_name), None)
@@ -26,7 +28,10 @@ class AgentLoop:
     
 
     async def run(self) -> str:
-        print(f"[agent] Starting session: {self.context.session_id}")
+        self.console.print(
+            f"[agent] Starting session: {self.context.session_id}",
+            style="bold green",
+        )
 
         try:
             max_steps = self.context.agent_profile.max_steps
@@ -34,7 +39,10 @@ class AgentLoop:
 
             for step in range(max_steps):
                 self.context.step = step
-                print(f"[loop] Step {step + 1} of {max_steps}")
+                self.console.print(
+                    f"[loop] Step {step + 1} of {max_steps}",
+                    style="bold white",
+                )
 
                 # 🧠 Perception
                 perception_raw = await extract_perception(query)
@@ -52,7 +60,10 @@ class AgentLoop:
 
                     # Detect LLM echoing the prompt
                     if "Your last tool produced this result" in pr_str or "Original user task:" in pr_str:
-                        print("[perception] ⚠️ LLM likely echoed prompt. No actionable plan.")
+                        self.console.print(
+                            "[perception] ⚠️ LLM likely echoed prompt. No actionable plan.",
+                            style="yellow",
+                        )
                         self.context.final_answer = "FINAL_ANSWER: [no result]"
                         break
 
@@ -60,7 +71,10 @@ class AgentLoop:
                     try:
                         perception_raw = json.loads(pr_str)
                     except json.JSONDecodeError:
-                        print("[perception] ⚠️ LLM response was neither valid JSON nor actionable text.")
+                        self.console.print(
+                            "[perception] ⚠️ LLM response was neither valid JSON nor actionable text.",
+                            style="yellow",
+                        )
                         self.context.final_answer = "FINAL_ANSWER: [no result]"
                         break
 
@@ -75,11 +89,20 @@ class AgentLoop:
                             perception_raw = json.loads(perception_raw)
                         perception = PerceptionResult(**perception_raw)
                     except Exception as e:
-                        print(f"[perception] ⚠️ LLM perception failed: {e}")
-                        print(f"[perception] Raw output: {perception_raw}")
+                        self.console.print(
+                            f"[perception] ⚠️ LLM perception failed: {e}",
+                            style="bold red",
+                        )
+                        self.console.print(
+                            f"[perception] Raw output: {perception_raw}",
+                            style="red",
+                        )
                         break
 
-                print(f"[perception] Intent: {perception.intent}, Hint: {perception.tool_hint}")
+                self.console.print(
+                    f"[perception] Intent: {perception.intent}, Hint: {perception.tool_hint}",
+                    style="cyan",
+                )
 
                 # 💾 Memory Retrieval
                 retrieved = self.context.memory.retrieve(
@@ -88,7 +111,10 @@ class AgentLoop:
                     type_filter=self.context.agent_profile.memory_config.get("type_filter", None),
                     session_filter=self.context.session_id
                 )
-                print(f"[memory] Retrieved {len(retrieved)} memories")
+                self.console.print(
+                    f"[memory] Retrieved {len(retrieved)} memories",
+                    style="magenta",
+                )
 
                 # 📊 Planning (via strategy)
                 plan = await decide_next_action(
@@ -97,7 +123,7 @@ class AgentLoop:
                     memory_items=retrieved,
                     all_tools=self.tools
                 )
-                print(f"[plan] {plan}")
+                self.console.print(f"[plan] {plan}", style="blue")
 
                 if "FINAL_ANSWER:" in plan:
                     # Optionally extract the final answer portion
@@ -128,7 +154,10 @@ class AgentLoop:
                         result_obj = raw
 
                     result_str = result_obj.get("markdown") if isinstance(result_obj, dict) else str(result_obj)
-                    print(f"[action] {tool_name} → {result_str}")
+                    # self.console.print(
+                    #     f"[action] {tool_name} → {result_str}",
+                    #     style="green",
+                    # )
 
                     # 🧠 Add memory
                     memory_item = MemoryItem(
@@ -153,11 +182,17 @@ class AgentLoop:
 
     Otherwise, return the next FUNCTION_CALL."""
                 except Exception as e:
-                    print(f"[error] Tool execution failed: {e}")
+                    self.console.print(
+                        f"[error] Tool execution failed: {e}",
+                        style="bold red",
+                    )
                     break
 
         except Exception as e:
-            print(f"[agent] Session failed: {e}")
+            self.console.print(
+                f"[agent] Session failed: {e}",
+                style="bold red",
+            )
 
         return self.context.final_answer or "FINAL_ANSWER: [no result]"
 

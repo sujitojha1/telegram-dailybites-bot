@@ -44,7 +44,7 @@ async def main():
         mcp_servers = profile.get("mcp_servers", [])
 
     multi_mcp = MultiMCP(server_configs=mcp_servers)
-    console.print("\nAgent before initialize", style="dim")
+    #console.print("\nAgent before initialize", style="dim")
     await multi_mcp.initialize()
 
     agent = AgentLoop(
