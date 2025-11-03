@@ -14,10 +14,10 @@ At least one of the servers you add must be an SSE server.
 
 ## High Level Plan
 - [x] Consolidate existing research, code snippets, and MCP references in the repo; resolve initial embedding/MCP inspection blockers.
-- [ ] Stand up an `mcp_servers/` package, migrate the current prototype scripts, and define shared base classes/utilities.
-- [ ] Rebuild the core agent loop with clean config loading (Pydantic), `uv` task scheduling, and structured logging.
-- [ ] Implement the news discovery workflow (Hacker News, Hugging Face papers, AI company blogs) with reproducible tests.
-- [ ] Integrate Gmail MCP actions end-to-end, including credential storage, token refresh, and email composition.
+- [X] Stand up an `mcp_servers/` package, migrate the current prototype scripts, and define shared base classes/utilities.
+- [X] Rebuild the core agent loop with clean config loading (Pydantic), `uv` task scheduling, and structured logging.
+- [X] Implement the news discovery workflow (Hacker News, Hugging Face papers, AI company blogs) with reproducible tests.
+- [X] Integrate Gmail MCP actions end-to-end, including credential storage, token refresh, and email composition.
 - [ ] Add a Google Sheets MCP action to persist curated results and expose sheet metadata back to the agent.
 - [ ] Design and wire a Telegram bridge that emits updates over SSE, covering webhook/long-poll strategies and failure handling.
 - [ ] Establish an async debugging toolkit (pdb, `asyncio` inspectors) and document hot paths for faster triage.

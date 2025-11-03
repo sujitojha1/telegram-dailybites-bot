@@ -10,6 +10,14 @@ import asyncio
 from datetime import datetime, timedelta
 import time
 import re
+import os
+import base64
+from email.message import EmailMessage
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 
 @dataclass
@@ -239,6 +247,52 @@ async def fetch_content(url: str, ctx: Context) -> str:
         ctx: MCP context for logging
     """
     return await fetcher.fetch_and_parse(url, ctx)
+
+@mcp.tool()
+async def send_email(subject: str, message: str) -> dict:
+    """
+    Send an email to self using Gmail API.
+
+    Args:
+        subject: subject of email
+        message: body of email
+    """
+
+    try:
+        SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
+        CREDS_PATH = '/Users/payalchakraborty/Dev/google/client_creds.json'  # Adjust path as needed
+        TOKEN_PATH = '/Users/payalchakraborty/Dev/google/app_tokens.json'
+
+        if os.path.exists(TOKEN_PATH):
+            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
+            creds = flow.run_local_server(port=0)
+            with open(TOKEN_PATH, 'w') as token_file:
+                token_file.write(creds.to_json())
+
+        service = build('gmail', 'v1', credentials=creds)
+
+        user_profile = service.users().getProfile(userId='me').execute()
+        user_email = user_profile.get('emailAddress', 'me')
+
+        message_obj = EmailMessage()
+        message_obj.set_content(message)
+        message_obj['To'] = user_email
+        message_obj['From'] = user_email
+        message_obj['Subject'] = subject
+
+        encoded_message = base64.urlsafe_b64encode(message_obj.as_bytes()).decode()
+        create_message = {'raw': encoded_message}
+
+        send_message = await asyncio.to_thread(
+            service.users().messages().send(userId="me", body=create_message).execute
+        )
+
+        return {"status": "success", "message_id": send_message['id']}
+
+    except HttpError as error:
+        return {"status": "error", "error_message": str(error)}
 
 
 

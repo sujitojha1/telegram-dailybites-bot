@@ -48,11 +48,12 @@ class MemoryManager:
         self.embeddings: List[np.ndarray] = []
 
     def _get_embedding(self, text: str) -> np.ndarray:
+        print('Debuggin - Getting embedding for text:', text)
         response = requests.post(
             self.embedding_model_url,
             json={"model": self.model_name, "prompt": text}
         )
-
+        print('Debuggin - Embedding response status:', response.status_code)
         print(response.raise_for_status())
         return np.array(response.json()["embedding"], dtype=np.float32)
 

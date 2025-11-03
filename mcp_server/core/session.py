@@ -82,7 +82,7 @@ class MultiMCP:
                             # console.print("[agent] MCP session initialized", style="green")
                             tools = await session.list_tools()
                             tool_names = ", ".join(tool.name for tool in tools.tools)
-                            # console.print(f"→ Tools received: {tool_names}", style="cyan")
+                            console.print(f"→ Tools received: {tool_names}", style="cyan")
                             for tool in tools.tools:
                                 self.tool_map[tool.name] = {
                                     "config": config,
