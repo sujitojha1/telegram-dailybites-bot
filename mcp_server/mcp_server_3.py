@@ -12,6 +12,7 @@ import time
 import re
 import os
 import base64
+import html
 from email.message import EmailMessage
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -63,16 +64,36 @@ class DuckDuckGoSearcher:
         if not results:
             return "No results were found for your search query. This could be due to DuckDuckGo's bot detection or the query returned no matches. Please try rephrasing your search or try again in a few minutes."
 
-        output = []
-        output.append(f"Found {len(results)} search results:\n")
+        header = "DAILYBITES SEARCH DIGEST"
+        sub_header = f"Top {len(results)} curated links"
+
+        output = [
+            header,
+            "=" * len(header),
+            sub_header,
+            "-" * len(sub_header),
+            "",
+            "Detailed Highlights",
+            "--------------------",
+        ]
 
         for result in results:
             output.append(f"{result.position}. {result.title}")
-            output.append(f"   URL: {result.link}")
-            output.append(f"   Summary: {result.snippet}")
-            output.append("")  # Empty line between results
+            output.append(f"   Link   : {result.link}")
+            if result.snippet:
+                output.append(f"   Summary: {result.snippet}")
+            output.append("")
 
-        return "\n".join(output)
+        output.extend(
+            [
+                "Quick Link List",
+                "---------------",
+            ]
+        )
+        for result in results:
+            output.append(f"[{result.position}] {result.link}")
+
+        return "\n".join(output).strip()
 
     async def search(
         self, query: str, ctx: Context, max_results: int = 10
@@ -213,6 +234,39 @@ class WebContentFetcher:
             return f"Error: An unexpected error occurred while fetching the webpage ({str(e)})"
 
 
+def strip_html_tags(text: str) -> str:
+    """Strip HTML tags for email-safe plain text output."""
+    if not text:
+        return ""
+    soup = BeautifulSoup(text, "html.parser")
+    cleaned_text = soup.get_text(separator="\n")
+    cleaned_text = re.sub(r"\n{2,}", "\n\n", cleaned_text)
+    return cleaned_text.strip()
+
+
+def is_probably_html(text: str) -> bool:
+    if not text:
+        return False
+    soup = BeautifulSoup(text, "html.parser")
+    return bool(soup.find()) or bool(re.search(r"<[^>]+>", text))
+
+
+def build_html_email_body(message: str, fallback_text: str) -> str:
+    """Convert the message into an HTML email body with monospace formatting fallback."""
+    base_style = "font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; color: #111; line-height: 1.5;"
+    if is_probably_html(message):
+        body_content = message
+    else:
+        safe_text = html.escape(message or fallback_text or "")
+        body_content = (
+            "<pre style=\"font-family: 'SFMono-Regular', Consolas, monospace; font-size: 14px; "
+            "background-color: #f7f7f9; padding: 16px; border-radius: 8px; line-height: 1.4;\">"
+            f"{safe_text}"
+            "</pre>"
+        )
+    return f"<html><body style=\"{base_style}\">{body_content}</body></html>"
+
+
 # Initialize FastMCP server
 mcp = FastMCP("ddg-search")
 searcher = DuckDuckGoSearcher()
@@ -276,8 +330,15 @@ async def send_email(subject: str, message: str) -> dict:
         user_profile = service.users().getProfile(userId='me').execute()
         user_email = user_profile.get('emailAddress', 'me')
 
+        clean_message = strip_html_tags(message)
+        if not clean_message:
+            clean_message = (message or "").strip()
+
+        html_message = build_html_email_body(message, clean_message)
+
         message_obj = EmailMessage()
-        message_obj.set_content(message)
+        message_obj.set_content(clean_message, subtype="plain", charset="utf-8")
+        message_obj.add_alternative(html_message, subtype="html", charset="utf-8")
         message_obj['To'] = user_email
         message_obj['From'] = user_email
         message_obj['Subject'] = subject
