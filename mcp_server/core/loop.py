@@ -123,7 +123,7 @@ class AgentLoop:
                     memory_items=retrieved,
                     all_tools=self.tools
                 )
-                self.console.print(f"[plan] {plan}", style="blue")
+                #self.console.print(f"[plan] {plan}", style="blue")
 
                 if "FINAL_ANSWER:" in plan:
                     # Optionally extract the final answer portion

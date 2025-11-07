@@ -55,7 +55,7 @@ async def main():
     try:
         final_response = await agent.run()
         answer = format_final_answer(final_response)
-        console.print()
+        
         console.print(
             Panel(
                 Markdown(answer),

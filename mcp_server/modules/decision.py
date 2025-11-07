@@ -83,7 +83,7 @@ Respond in **exactly one line** using one of the following formats:
 
     try:
         raw = (await model.generate_text(prompt)).strip()
-        log("plan", f"LLM output: {raw}")
+        #log("plan", f"LLM output: {raw}")
 
         for line in raw.splitlines():
             if line.strip().startswith("FUNCTION_CALL:") or line.strip().startswith("FINAL_ANSWER:"):
@@ -92,6 +92,6 @@ Respond in **exactly one line** using one of the following formats:
         return "FINAL_ANSWER: [unknown]"
 
     except Exception as e:
-        log("plan", f"⚠️ Planning failed: {e}")
+        #log("plan", f"⚠️ Planning failed: {e}")
         return "FINAL_ANSWER: [unknown]"
 

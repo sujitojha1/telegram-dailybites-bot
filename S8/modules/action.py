@@ -9,9 +9,13 @@ try:
     from agent import log
 except ImportError:
     import datetime
+    from rich.console import Console
+
+    console = Console()
+
     def log(stage: str, msg: str):
         now = datetime.datetime.now().strftime("%H:%M:%S")
-        print(f"[{now}] [{stage}] {msg}")
+        console.print(f"[{now}] [{stage}] {msg}")
 
 
 class ToolCallResult(BaseModel):
