@@ -20,6 +20,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field, AnyHttpUrl, ValidationError, field_validator
 
 load_dotenv()
 
@@ -38,6 +39,61 @@ class SearchResult:
     link: str
     snippet: str
     position: int
+
+
+@dataclass
+class EmailContent:
+    subject: str
+    message: str
+
+
+@dataclass
+class SheetRow:
+    date: str
+    link1: str
+    link2: str
+    link3: str
+
+
+class EmailRequest(BaseModel):
+    subject: str = Field(..., min_length=3, max_length=200, description="Email subject line")
+    message: str = Field(..., min_length=1, description="Email body text or HTML")
+
+    @field_validator("subject", "message", mode="before")
+    @classmethod
+    def _strip_whitespace(cls, value: Any) -> str:
+        if value is None:
+            raise ValueError("Value cannot be null")
+        value = str(value).strip()
+        if not value:
+            raise ValueError("Value cannot be empty")
+        return value
+
+    def to_dataclass(self) -> EmailContent:
+        return EmailContent(subject=self.subject, message=self.message)
+
+
+class SheetAppendRequest(BaseModel):
+    link1: AnyHttpUrl
+    link2: AnyHttpUrl
+    link3: AnyHttpUrl
+    date_str: Optional[str] = Field(default=None, description="ISO date string (YYYY-MM-DD)")
+
+    @field_validator("date_str")
+    @classmethod
+    def _validate_date(cls, value: Optional[str]) -> Optional[str]:
+        if value:
+            datetime.strptime(value, "%Y-%m-%d")
+        return value
+
+    def to_dataclass(self) -> SheetRow:
+        resolved_date = self.date_str or datetime.now().strftime("%Y-%m-%d")
+        return SheetRow(
+            date=resolved_date,
+            link1=str(self.link1),
+            link2=str(self.link2),
+            link3=str(self.link3),
+        )
 
 
 class RateLimiter:
@@ -344,24 +400,25 @@ async def send_email(subject: str, message: str) -> dict:
     """
 
     try:
+        email_payload = EmailRequest(subject=subject, message=message).to_dataclass()
         creds = load_google_credentials(GMAIL_SCOPES, GMAIL_TOKEN_PATH)
         service = build('gmail', 'v1', credentials=creds)
 
         user_profile = service.users().getProfile(userId='me').execute()
         user_email = user_profile.get('emailAddress', 'me')
 
-        clean_message = strip_html_tags(message)
+        clean_message = strip_html_tags(email_payload.message)
         if not clean_message:
-            clean_message = (message or "").strip()
+            clean_message = email_payload.message.strip()
 
-        html_message = build_html_email_body(message, clean_message)
+        html_message = build_html_email_body(email_payload.message, clean_message)
 
         message_obj = EmailMessage()
         message_obj.set_content(clean_message, subtype="plain", charset="utf-8")
         message_obj.add_alternative(html_message, subtype="html", charset="utf-8")
         message_obj['To'] = user_email
         message_obj['From'] = user_email
-        message_obj['Subject'] = subject
+        message_obj['Subject'] = email_payload.subject
 
         encoded_message = base64.urlsafe_b64encode(message_obj.as_bytes()).decode()
         create_message = {'raw': encoded_message}
@@ -372,6 +429,8 @@ async def send_email(subject: str, message: str) -> dict:
 
         return {"status": "success", "message_id": send_message['id']}
 
+    except ValidationError as error:
+        return {"status": "error", "error_message": error.errors()}
     except HttpError as error:
         return {"status": "error", "error_message": str(error)}
 
@@ -395,13 +454,19 @@ async def append_google_sheets(
         if not DAILYBITES_SPREADSHEET_ID:
             raise ValueError("DAILYBITES_SPREADSHEET_ID is not configured in the environment.")
 
+        sheet_request = SheetAppendRequest(
+            link1=link1,
+            link2=link2,
+            link3=link3,
+            date_str=date_str,
+        ).to_dataclass()
+
         spreadsheet_id = DAILYBITES_SPREADSHEET_ID
         sheet_range = DAILYBITES_SHEET_RANGE or "Sheet1!A:D"
         creds = load_google_credentials(SHEETS_SCOPES, SHEETS_TOKEN_PATH)
         service = build('sheets', 'v4', credentials=creds)
 
-        date_value = (date_str or datetime.now().strftime("%Y-%m-%d")).strip()
-        payload = [[date_value, link1.strip(), link2.strip(), link3.strip()]]
+        payload = [[sheet_request.date, sheet_request.link1, sheet_request.link2, sheet_request.link3]]
 
         request = service.spreadsheets().values().append(
             spreadsheetId=spreadsheet_id,
@@ -420,7 +485,9 @@ async def append_google_sheets(
             "updatedRows": updates.get("updatedRows", 0),
         }
 
-    except HttpError as error:
+    except ValidationError as error:
+        return {"status": "error", "error_message": error.errors()}
+    except (HttpError, ValueError) as error:
         return {"status": "error", "error_message": str(error)}
 
 
