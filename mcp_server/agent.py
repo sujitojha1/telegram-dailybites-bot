@@ -34,7 +34,9 @@ def log(stage: str, msg: str):
 
 async def main():
     console.print("🧠 Telegram Agent Ready", style="bold green")
-    user_input = "find top 3 latest Hacker News article - https://news.ycombinator.com/ with links, before sending add html tags and send the email"
+    user_input = """find top 3 latest Hacker News article - https://news.ycombinator.com/ with links, 
+    send email before sending add html tags and 
+    add the date and three links in the google sheet"""
     # user_input = input("🧑 What do you want to solve today? → ")
     console.print(f"🧑 What do you want to solve today? → {user_input}")
 

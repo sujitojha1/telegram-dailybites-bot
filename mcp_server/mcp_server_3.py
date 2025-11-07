@@ -19,6 +19,17 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GOOGLE_CREDS_PATH = "/Users/payalchakraborty/Dev/google/client_creds.json"
+GMAIL_TOKEN_PATH = "/Users/payalchakraborty/Dev/google/app_tokens.json"
+SHEETS_TOKEN_PATH = "/Users/payalchakraborty/Dev/google/sheets_tokens.json"
+GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
+SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+DAILYBITES_SPREADSHEET_ID = os.getenv("DAILYBITES_SPREADSHEET_ID", "").strip()
+DAILYBITES_SHEET_RANGE = os.getenv("DAILYBITES_SHEET_RANGE", "Sheet1!A:D").strip()
 
 
 @dataclass
@@ -267,6 +278,26 @@ def build_html_email_body(message: str, fallback_text: str) -> str:
     return f"<html><body style=\"{base_style}\">{body_content}</body></html>"
 
 
+def load_google_credentials(scopes: List[str], token_path: str) -> Credentials:
+    """Load or refresh OAuth credentials for the requested scopes."""
+    creds: Optional[Credentials] = None
+
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, scopes)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_CREDS_PATH, scopes)
+            creds = flow.run_local_server(port=0)
+
+        with open(token_path, "w") as token_file:
+            token_file.write(creds.to_json())
+
+    return creds
+
+
 # Initialize FastMCP server
 mcp = FastMCP("ddg-search")
 searcher = DuckDuckGoSearcher()
@@ -313,18 +344,7 @@ async def send_email(subject: str, message: str) -> dict:
     """
 
     try:
-        SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
-        CREDS_PATH = '/Users/payalchakraborty/Dev/google/client_creds.json'  # Adjust path as needed
-        TOKEN_PATH = '/Users/payalchakraborty/Dev/google/app_tokens.json'
-
-        if os.path.exists(TOKEN_PATH):
-            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
-            creds = flow.run_local_server(port=0)
-            with open(TOKEN_PATH, 'w') as token_file:
-                token_file.write(creds.to_json())
-
+        creds = load_google_credentials(GMAIL_SCOPES, GMAIL_TOKEN_PATH)
         service = build('gmail', 'v1', credentials=creds)
 
         user_profile = service.users().getProfile(userId='me').execute()
@@ -351,6 +371,54 @@ async def send_email(subject: str, message: str) -> dict:
         )
 
         return {"status": "success", "message_id": send_message['id']}
+
+    except HttpError as error:
+        return {"status": "error", "error_message": str(error)}
+
+
+@mcp.tool()
+async def append_google_sheets(
+    link1: str,
+    link2: str,
+    link3: str,
+    date_str: Optional[str] = None,
+) -> dict:
+    """
+    Append a row with date + three links to a Google Sheet stored in Drive.
+
+    Args:
+        link1/link2/link3: URLs to store.
+        date_str: Optional ISO date string. Defaults to today's date if omitted.
+    """
+
+    try:
+        if not DAILYBITES_SPREADSHEET_ID:
+            raise ValueError("DAILYBITES_SPREADSHEET_ID is not configured in the environment.")
+
+        spreadsheet_id = DAILYBITES_SPREADSHEET_ID
+        sheet_range = DAILYBITES_SHEET_RANGE or "Sheet1!A:D"
+        creds = load_google_credentials(SHEETS_SCOPES, SHEETS_TOKEN_PATH)
+        service = build('sheets', 'v4', credentials=creds)
+
+        date_value = (date_str or datetime.now().strftime("%Y-%m-%d")).strip()
+        payload = [[date_value, link1.strip(), link2.strip(), link3.strip()]]
+
+        request = service.spreadsheets().values().append(
+            spreadsheetId=spreadsheet_id,
+            range=sheet_range,
+            valueInputOption="USER_ENTERED",
+            insertDataOption="INSERT_ROWS",
+            body={"values": payload},
+        )
+
+        response = await asyncio.to_thread(request.execute)
+        updates = response.get("updates", {})
+
+        return {
+            "status": "success",
+            "updatedRange": updates.get("updatedRange"),
+            "updatedRows": updates.get("updatedRows", 0),
+        }
 
     except HttpError as error:
         return {"status": "error", "error_message": str(error)}
